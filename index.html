@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProcessLab · Planificación de Procesos e Hilos</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">PL</div>
+        <div>
+          <h1>ProcessLab</h1>
+          <p class="brand-sub">Sistemas Operativos</p>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <button class="nav-item active" data-section="dashboard">📊 Dashboard</button>
+        <button class="nav-item" data-section="procesos">📝 Registro de procesos</button>
+        <button class="nav-item" data-section="planificacion">⚙️ Planificación CPU</button>
+        <button class="nav-item" data-section="hilos">🧵 Gestión de hilos</button>
+        <button class="nav-item" data-section="gantt">📈 Diagrama de Gantt</button>
+        <button class="nav-item" data-section="metricas">📐 Métricas</button>
+        <button class="nav-item" data-section="comparacion">🔀 Comparación</button>
+        <button class="nav-item" data-section="codigo">💻 Código C++</button>
+        <button class="nav-item" data-section="ayuda">❓ Ayuda y teoría</button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="dot live"></span> Simulación local · JS
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- ============ DASHBOARD ============ -->
+      <section id="dashboard" class="section active">
+        <header class="section-header">
+          <h2>Dashboard</h2>
+          <p>Vista general del simulador de planificación de CPU e hilos.</p>
+        </header>
+        <div class="cards">
+          <div class="card metric-card">
+            <span class="card-label">Procesos registrados</span>
+            <span class="card-value" id="dash-procesos">0</span>
+          </div>
+          <div class="card metric-card">
+            <span class="card-label">Algoritmo actual</span>
+            <span class="card-value small" id="dash-algoritmo">FIFO</span>
+          </div>
+          <div class="card metric-card">
+            <span class="card-label">Tiempo de simulación</span>
+            <span class="card-value" id="dash-tiempo">0</span>
+          </div>
+          <div class="card metric-card">
+            <span class="card-label">Cambios de contexto</span>
+            <span class="card-value" id="dash-cambios">0</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Flujo del sistema</h3>
+          <div class="flow">
+            <div class="flow-node">Cola de listos</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Planificador</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node highlight">CPU</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Actualización de estado</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Métricas</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Resumen rápido</h3>
+          <p class="muted">
+            Carga el ejemplo académico, selecciona un algoritmo y presiona <strong>Iniciar</strong>.
+            Puedes avanzar paso a paso y observar el código C++ relacionado con cada acción.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ PROCESOS ============ -->
+      <section id="procesos" class="section">
+        <header class="section-header">
+          <h2>Registro de procesos</h2>
+          <p>Agrega, edita o elimina procesos. Las validaciones impiden datos incorrectos.</p>
+        </header>
+        <div class="card">
+          <form id="form-proceso" class="form-grid">
+            <div class="field">
+              <label>ID</label>
+              <input type="text" id="proc-id" placeholder="P1" maxlength="6" required />
+            </div>
+            <div class="field">
+              <label>Tiempo de llegada</label>
+              <input type="number" id="proc-llegada" min="0" value="0" required />
+            </div>
+            <div class="field">
+              <label>Ráfaga de CPU</label>
+              <input type="number" id="proc-rafaga" min="1" value="1" required />
+            </div>
+            <div class="field field-actions">
+              <button type="submit" class="btn primary">Agregar</button>
+              <button type="button" class="btn" id="btn-ejemplo">Cargar ejemplo</button>
+              <button type="button" class="btn danger" id="btn-reset">Reiniciar todo</button>
+            </div>
+          </form>
+          <p class="error" id="proc-error"></p>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Llegada</th><th>Ráfaga</th><th>Estado</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-procesos"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ PLANIFICACIÓN ============ -->
+      <section id="planificacion" class="section">
+        <header class="section-header">
+          <h2>Planificación de CPU</h2>
+          <p>Selecciona un algoritmo y controla la simulación paso a paso.</p>
+        </header>
+        <div class="card">
+          <div class="form-grid">
+            <div class="field">
+              <label>Algoritmo</label>
+              <select id="select-algoritmo">
+                <option value="FIFO">FIFO / FCFS</option>
+                <option value="SJF">SJF no apropiativo</option>
+                <option value="RR">Round Robin</option>
+              </select>
+            </div>
+            <div class="field" id="quantum-field" style="display:none">
+              <label>Quantum (RR)</label>
+              <input type="number" id="quantum" min="1" value="4" />
+            </div>
+            <div class="field">
+              <label>Velocidad (ms)</label>
+              <input type="range" id="velocidad" min="100" max="1500" step="100" value="600" />
+              <small class="muted" id="velocidad-val">600 ms</small>
+            </div>
+          </div>
+          <div class="controls">
+            <button class="btn primary" id="btn-iniciar">▶ Iniciar</button>
+            <button class="btn" id="btn-pausar">⏸ Pausar</button>
+            <button class="btn" id="btn-paso">⏭ Paso</button>
+            <button class="btn" id="btn-atras">⏮ Atrás</button>
+            <button class="btn" id="btn-completa">⏩ Ejecutar todo</button>
+            <button class="btn danger" id="btn-reiniciar-sim">⟲ Reiniciar</button>
+          </div>
+        </div>
+        <div class="cards">
+          <div class="card metric-card">
+            <span class="card-label">Tiempo actual</span>
+            <span class="card-value" id="sim-tiempo">0</span>
+          </div>
+          <div class="card metric-card">
+            <span class="card-label">En CPU</span>
+            <span class="card-value small" id="sim-cpu">—</span>
+          </div>
+          <div class="card metric-card">
+            <span class="card-label">Cola de listos</span>
+            <span class="card-value small" id="sim-cola">—</span>
+          </div>
+          <div class="card metric-card">
+            <span class="card-label">Terminados</span>
+            <span class="card-value small" id="sim-term">—</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Estado de los procesos</h3>
+          <table class="table">
+            <thead>
+              <tr><th>ID</th><th>Estado</th><th>Restante</th><th>Inicio</th><th>Fin</th></tr>
+            </thead>
+            <tbody id="tabla-sim"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Explicación del paso</h3>
+          <p id="explicacion-paso" class="muted">Presiona “Iniciar” o “Paso” para comenzar.</p>
+        </div>
+      </section>
+
+      <!-- ============ HILOS ============ -->
+      <section id="hilos" class="section">
+        <header class="section-header">
+          <h2>Gestión de hilos</h2>
+          <p>Diferencia entre procesos lógicos del ejercicio e hilos reales de C++.</p>
+        </header>
+        <div class="card">
+          <h3>Esquema del sistema</h3>
+          <div class="flow">
+            <div class="flow-node">Cola de listos</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Planificador</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node highlight">CPU lógica</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Actualización</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Métricas</div>
+          </div>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <h3>🔵 Procesos lógicos</h3>
+            <p>Son estructuras del simulador (JavaScript). Representan unidades de trabajo con llegada, ráfaga y estado. <strong>No son hilos reales.</strong></p>
+          </div>
+          <div class="card">
+            <h3>🧵 Hilos reales (C++)</h3>
+            <p>Se crean con <code>std::thread</code>. Su ejecución la decide el SO real, no el planificador académico del simulador.</p>
+          </div>
+          <div class="card">
+            <h3>⚙️ Planificador académico</h3>
+            <p>Implementado en JS/C++. Decide el orden según FIFO, SJF o RR usando un reloj lógico, no el tiempo real.</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Herramientas de C++ usadas</h3>
+          <ul class="list">
+            <li><code>std::thread</code> — crea hilos.</li>
+            <li><code>std::mutex</code> — protege datos compartidos.</li>
+            <li><code>std::lock_guard</code> — bloqueo RAII seguro.</li>
+            <li><code>std::condition_variable</code> — espera/notificación entre hilos.</li>
+            <li><code>std::join()</code> — espera a que un hilo termine.</li>
+          </ul>
+          <p class="warning">⚠️ Crear un hilo por proceso <strong>no</strong> hace que el SO respete FIFO/SJF/RR automáticamente. La coordinación debe ser explícita (mutex + condition_variable). El código C++ de referencia se muestra en la sección “Código C++”.</p>
+        </div>
+      </section>
+
+      <!-- ============ GANTT ============ -->
+      <section id="gantt" class="section">
+        <header class="section-header">
+          <h2>Diagrama de Gantt</h2>
+          <p>Cada color representa un proceso. Los intervalos grises son CPU inactiva.</p>
+        </header>
+        <div class="card">
+          <div class="gantt-scale" id="gantt-scale"></div>
+          <div class="gantt" id="gantt"></div>
+          <p class="muted">Haz clic en un segmento para ver su información.</p>
+        </div>
+        <div class="card" id="gantt-info">
+          <em>Selecciona un segmento del diagrama.</em>
+        </div>
+      </section>
+
+      <!-- ============ MÉTRICAS ============ -->
+      <section id="metricas" class="section">
+        <header class="section-header">
+          <h2>Métricas y estadísticas</h2>
+          <p>Calculadas con el reloj lógico de la simulación.</p>
+        </header>
+        <div class="cards" id="promedios"></div>
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Llegada</th><th>Ráfaga</th><th>1er inicio</th>
+                <th>Fin</th><th>Retorno</th><th>Espera</th><th>Respuesta</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-metricas"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ COMPARACIÓN ============ -->
+      <section id="comparacion" class="section">
+        <header class="section-header">
+          <h2>Comparación de algoritmos</h2>
+          <p>Ejecuta los tres algoritmos y compara sus promedios.</p>
+        </header>
+        <div class="card">
+          <div class="form-grid">
+            <div class="field">
+              <label>Quantum RR</label>
+              <input type="number" id="comp-quantum" min="1" value="4" />
+            </div>
+            <div class="field field-actions">
+              <button class="btn primary" id="btn-comparar">Recalcular comparación</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Algoritmo</th><th>Espera prom.</th><th>Retorno prom.</th>
+                <th>Respuesta prom.</th><th>Cambios contexto</th><th>Tiempo total</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-comparacion"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Barras comparativas</h3>
+          <div id="chart-bars"></div>
+          <p class="muted">Un algoritmo que minimiza la espera promedio no necesariamente ofrece la mejor respuesta interactiva.</p>
+        </div>
+      </section>
+
+      <!-- ============ CÓDIGO C++ ============ -->
+      <section id="codigo" class="section">
+        <header class="section-header">
+          <h2>Código fuente C++ de referencia</h2>
+          <p>Este código <strong>no se ejecuta en el navegador</strong>. Es la referencia equivalente al algoritmo simulado en JavaScript.</p>
+        </header>
+        <div class="card">
+          <div class="code-tabs" id="code-tabs">
+            <button class="tab active" data-code="estructura">Estructura</button>
+            <button class="tab" data-code="fifo">FIFO</button>
+            <button class="tab" data-code="sjf">SJF</button>
+            <button class="tab" data-code="rr">Round Robin</button>
+            <button class="tab" data-code="metricas">Métricas</button>
+            <button class="tab" data-code="hilos">Hilos</button>
+            <button class="tab" data-code="main">main()</button>
+          </div>
+          <pre class="code-block"><code id="code-view"></code></pre>
+          <div class="code-explain">
+            <h4>Explicación del bloque</h4>
+            <div id="code-explain-text" class="muted"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ AYUDA ============ -->
+      <section id="ayuda" class="section">
+        <header class="section-header">
+          <h2>Ayuda y conceptos teóricos</h2>
+        </header>
+        <div class="card">
+          <h3>FIFO / FCFS</h3>
+          <p>Ejecuta primero el proceso que llegó antes. No apropiativo. Puede provocar efecto convoy (procesos cortos esperan detrás de uno largo).</p>
+        </div>
+        <div class="card">
+          <h3>SJF no apropiativo</h3>
+          <p>Elige el proceso disponible con menor ráfaga. Minimiza la espera promedio, pero puede producir inanición de procesos largos. Empates: llegada, luego ID.</p>
+        </div>
+        <div class="card">
+          <h3>Round Robin</h3>
+          <p>Cada proceso recibe un quantum. Si no termina, vuelve al final de la cola. Si llega un proceso en el mismo instante en que termina un quantum, se encola <strong>antes</strong> de reinsertar el proceso interrumpido (criterio definido explícitamente).</p>
+        </div>
+        <div class="card">
+          <h3>Métricas</h3>
+          <p><code>TR = Fin − Llegada</code> · <code>TE = TR − Ráfaga</code> · <code>TRes = Primer inicio − Llegada</code>. Se calculan con reloj lógico, no con tiempo real de ejecución.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
